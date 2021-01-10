@@ -1,0 +1,377 @@
+PARSER_BEGIN(ParserCompiler)
+
+
+/** ID lister. */
+public class ParserCompiler
+{
+  /** Main entry point. */
+  public static void main(String args [])
+  {
+    ParserCompiler parser = new ParserCompiler(System.in);
+    ASTNode exp;
+    Environment env = null;
+    while (true)
+    {
+      try
+      {
+        exp = parser.Start(env);
+        //System.out.println(exp.eval(env));
+      }
+      catch (Exception e)
+      {
+        //System.out.println("Syntax Error!");
+        parser.ReInit(System.in);
+      }
+    }
+  }
+}
+
+PARSER_END(ParserCompiler)
+
+SKIP :
+{
+  " "
+| "\t"
+| "\r"
+| "\n"
+}
+
+TOKEN :
+{
+  < DEF : "def" >
+| 
+  < IN : "in" >
+| 
+  < END : "end" >
+|	
+  < IF : "if" >	
+|	
+  < THEN : "then" >	
+|	
+  < ELSE : "else" >	
+|	
+  < WHILE : "while" >	
+|	
+  < DO : "do" >	
+|	
+  < PRINT : "print" >	
+|	
+  < PRINTLN : "println" >	
+|	
+  < Bool : "true" | "false" >	
+|	
+  < NEW : "new" >
+|
+  < INT : "int" >
+|
+  < BOOLEAN : "bool" >
+|
+  < REF : "ref" >
+| 
+  < Id : [ "a"-"z", "A"-"Z" ] ([ "a"-"z", "A"-"Z", "0"-"9" ])* >
+| 
+  < Num : ([ "0"-"9" ])+ >
+| 
+  < PLUS : "+" >
+| 
+  < MINUS : "-" >
+| 
+  < TIMES : "*" >
+| 
+  < DIV : "/" >
+|	
+  < REMAINDER : "%" >	
+| 	
+  < EQUALS : "=" >	
+|	
+  < DOUBLE_EQUALS : "==" >	
+|	
+  < GREATER_EQ : ">=" >	
+|	
+  < LESS_EQ : "<=" >	
+|	
+  < GREATER_THAN : ">" >	
+|	
+  < LESS_THAN : "<" >	
+|	
+  < ATRIBUTION : ":=" >	
+|	
+  < SEMICOLON : ";" >	
+|	
+  < EXCLAMATION : "!" >	
+|	
+  < AND : "&&" >	
+|	
+  < OR : "||" >	
+|	
+  < NOT : "~" >
+|
+  < TWO_POINTS : ":" >
+|	
+  < LPAR : "(" >	
+| 	
+  < RPAR : ")" >	
+}
+
+ASTNode Start(Environment<?> e) :
+{
+  ASTNode t;
+}
+{
+  t = ExpM(e) < EOF >
+  {
+    return t;
+  }
+}
+
+ASTNode ExpM(Environment<?> e) :	
+{	
+  Token op;	
+  ASTNode t1, t2;	
+}	
+{	
+  (	
+  t1 = ExpLog(e)	
+  (	
+    < SEMICOLON >	
+    t2 = ExpLog(e)	
+    {	
+      t1 = new ASTSeq(t1, t2);	
+    }	
+  )*	
+  )	
+  {	
+    return t1;	
+  }	
+}
+
+ASTNode ExpLog(Environment<?> e) :	
+{	
+  Token op;	
+  ASTNode t1, t2;	
+}	
+{	
+  t1 = Exp(e)	
+  (	
+    (	
+      op = < AND >	
+    | op = < OR >	
+    )	
+    t2 = Exp(e)	
+    {	
+      switch(op.kind) {
+	    case AND:	
+			t1 = new ASTLogicAnd(t1,t2); break;	
+		case OR:	
+			t1 = new ASTLogicOr(t1,t2); break;	
+		default:	
+			break;	
+	  }	
+    }	
+  )*	
+  	
+  {	
+    return t1;	
+  }	
+}
+
+ASTNode Exp(Environment<?> e) :	
+{	
+  Token op;	
+  ASTNode t1=null, t2;	
+  boolean flag = false;	
+}	
+{  (
+  (	
+	< NOT > { flag = !flag; }	
+  )*	
+  t1 = ExpAlg(e)	
+  {	
+	if(flag) t1 = new ASTLogicNeg(t1);	
+  }	
+  (	
+    (	
+      op = < DOUBLE_EQUALS >	
+    | op = < ATRIBUTION >	
+    | op = < GREATER_EQ >	
+    | op = < LESS_EQ >	
+    | op = < GREATER_THAN >	
+    | op = < LESS_THAN >
+    )	
+    t2 = ExpAlg(e)	
+    {	
+	switch(op.kind) {	
+		case DOUBLE_EQUALS:	
+			t1 = new ASTEq(t1,t2); break;	
+		case ATRIBUTION:	
+			t1 = new ASTAssign(t1,t2); break;	
+		case GREATER_EQ:	
+			t1 = new ASTGreatEq(t1,t2); break;	
+		case LESS_EQ:	
+			t1 = new ASTLessEq(t1,t2); break;	
+		case GREATER_THAN:	
+			t1 = new ASTGreaterThan(t1,t2); break;	
+		case LESS_THAN:	
+			t1 = new ASTLessThan(t1,t2); break;	
+		default:	
+			break;	
+	  }	
+    }	
+  )?
+|  
+  (	
+    op = < PRINT >	
+  | op = < PRINTLN >	
+  ) (t1 = ExpAlg(e))?	
+  {	
+	if(op.kind == PRINT)	
+		t1 = new ASTPrint(t1, false);	
+	else t1 = new ASTPrint(t1, true);	
+  }
+)
+  {	
+    return t1;	
+  }	
+}
+
+ASTNode ExpAlg(Environment<?> e) :	
+{	
+  Token op;	
+  ASTNode t1 = null, t2;	
+}	
+{	
+  t1 = Term(e)	
+  (	
+    (
+      op = < PLUS >	
+    | op = < MINUS >	
+    )	
+    t2 = Term(e)	
+    {	
+	  switch(op.kind) {
+	    case PLUS:	
+			t1 = new ASTPlus(t1,t2); break;	
+		case MINUS:	
+			t1 = new ASTSub(t1,t2); break;	
+	    case AND:	
+			t1 = new ASTLogicAnd(t1,t2); break;	
+		case OR:	
+			t1 = new ASTLogicOr(t1,t2); break;	
+		default:	
+			break;	
+	  }	
+    }	
+  )*	
+  {	
+    return t1;	
+  }	
+}
+
+ASTNode Term(Environment<?> e) :	
+{	
+  Token op;	
+  ASTNode t1, t2;	
+}	
+{	
+  t1 = Fact(e)	
+  (	
+    (	
+      op = < TIMES >	
+    | op = < DIV >	
+    | op = < REMAINDER >	
+    )	
+    t2 = Fact(e)	
+    {	
+      if (op.kind == TIMES) t1 = new ASTMult(t1, t2);	
+      else if(op.kind == DIV) t1 = new ASTDiv(t1, t2);	
+      else t1 = new ASTRemainder(t1,t2);	
+    }	
+  )*	
+  	
+  {	
+    return t1;	
+  }	
+}
+
+ASTNode Fact(Environment<?> e) :
+{
+  Token n, op;
+  int c = 0;
+  java.util.List<Bind> defInits;
+  ASTNode t, tDefInit, tDefBody = null;
+  IType type = null;
+}
+{
+  (
+    n = < Num >
+    {
+      t = new ASTNum(Integer.parseInt(n.image));
+    }
+  |
+   n = < Bool >
+   {
+	 t = new ASTBool(Boolean.parseBoolean(n.image));
+   }
+  |
+   < NEW > t = Fact(e)
+   {
+	 t = new ASTMCell(t);
+   }
+  | 
+    (
+      n = < PLUS >
+    | n = < MINUS >
+    )
+    t = Fact(e)
+    { if(n.kind == MINUS)
+      	t = new ASTMult(new ASTNum(-1), t);
+    }
+  |  
+    < DEF > { defInits = new java.util.LinkedList<Bind>(); }
+    (n = < Id > < TWO_POINTS > (< REF > { c++; })*
+    							(op = < INT > |
+    							op = < BOOLEAN >)
+    							{
+									if(op.kind == INT)
+										type = new TInt();
+									else
+										type = new TBool();
+									for(int i = 0; i < c; i++) {
+										type = new TRef(type);
+									}
+    							}
+    < EQUALS > tDefInit = ExpM(e) { defInits.add(new Bind(n.image,tDefInit, type)); c = 0;})+
+    	< IN > tDefBody = ExpM(e) < END >
+    {
+      t = new ASTDef(defInits, tDefBody);
+    }
+  |
+     < IF > t = ExpM(e)  < THEN > tDefInit = ExpM(e)
+     (
+       < ELSE > tDefBody = ExpM(e)
+     )? < END >
+     {
+		t = new ASTIfThenElse(t, tDefInit, tDefBody);
+     }
+  |
+     < WHILE > t = ExpM(e) < DO > tDefInit = ExpM(e) < END >
+     {
+		t = new ASTWhileDo(t, tDefInit);
+     }
+  | 
+    n = < Id >
+    {
+      t = new ASTVar(n.image);
+    }  
+  |
+  	< EXCLAMATION > t = Fact(e)
+    {
+      t = new ASTReference(t);
+    }
+  |
+    < LPAR > t = ExpM(e) < RPAR >
+  )
+  {
+    return t;
+  }
+}

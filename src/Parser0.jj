@@ -1,0 +1,327 @@
+PARSER_BEGIN(ParserInterpreter)
+
+
+/** ID lister. */
+public class ParserInterpreter
+{
+  /** Main entry point. */
+  public static void main(String args [])
+  {
+    ParserInterpreter parser = new ParserInterpreter(System.in);
+    ASTNode exp;
+    Environment env = null;
+    while (true)
+    {
+      try
+      {
+        exp = parser.Start(env);
+        //System.out.println(exp.eval(env));
+      }
+      catch (Exception e)
+      {
+        //System.out.println("Syntax Error!");
+        parser.ReInit(System.in);
+      }
+    }
+  }
+}
+
+PARSER_END(ParserInterpreter)
+
+SKIP :
+{
+  " "
+| "\t"
+| "\r"
+}
+
+TOKEN :
+{
+  < DEF : "def" >
+| 
+  < IN : "in" >
+| 
+  < END : "end" >
+|
+  < IF : "if" >
+|
+  < THEN : "then" >
+|
+  < ELSE : "else" >
+|
+  < WHILE : "while" >
+|
+  < DO : "do" >
+|
+  < PRINT : "print" >
+|
+  < PRINTLN : "println" >
+|
+  < Bool : "true" | "false" >
+|
+  < NEW : "new" >
+| 
+  < Id : [ "a"-"z", "A"-"Z" ] ([ "a"-"z", "A"-"Z", "0"-"9" ])* >
+| 
+  < Num : ([ "0"-"9" ])+ >
+| 
+  < PLUS : "+" >
+| 
+  < MINUS : "-" >
+| 
+  < TIMES : "*" >
+| 
+  < DIV : "/" >
+|
+  < REMAINDER : "%" >
+| 
+  < EQUALS : "=" >
+|
+  < DOUBLE_EQUALS : "==" >
+|
+  < GREATER_EQ : ">=" >
+|
+  < LESS_EQ : "<=" >
+|
+  < GREATER_THAN : ">" >
+|
+  < LESS_THAN : "<" >
+|
+  < ATRIBUTION : ":=" >
+|
+  < SEMICOLON : ";" >
+|
+  < EXCLAMATION : "!" >
+|
+  < AND : "&&" >
+|
+  < OR : "||" >
+|
+  < NOT : "~" >
+|
+  < LPAR : "(" >
+| 
+  < RPAR : ")" >
+| 
+  < EL : "\n" >
+}
+
+ASTNode Start(Environment<?> e) :
+{
+  ASTNode t;
+}
+{
+  t = ExpM(e) < EL >
+  {
+    return t;
+  }
+}
+
+ASTNode ExpM(Environment<?> e) :
+{
+  Token op;
+  ASTNode t1, t2;
+}
+{
+  (
+  t1 = Exp(e)
+  (
+    < SEMICOLON >
+    t2 = Exp(e)
+    {
+      t1 = new ASTSeq(t1, t2);
+    }
+  )*
+  )
+  {
+    return t1;
+  }
+}
+
+ASTNode Exp(Environment<?> e) :
+{
+  Token op;
+  ASTNode t1 = null, t2;
+}
+{
+  (
+  t1 = ExpAlg(e)
+  (
+    (
+      op = < DOUBLE_EQUALS >
+    | op = < ATRIBUTION >
+    | op = < GREATER_EQ >
+    | op = < LESS_EQ >
+    | op = < GREATER_THAN >
+    | op = < LESS_THAN >
+    )
+    t2 = ExpAlg(e)
+    {
+	  switch(op.kind) {
+		case DOUBLE_EQUALS:
+			t1 = new ASTEq(t1,t2); break;
+		case ATRIBUTION:
+			t1 = new ASTAssign(t1,t2); break;
+		case GREATER_EQ:
+			t1 = new ASTGreatEq(t1,t2); break;
+		case LESS_EQ:
+			t1 = new ASTLessEq(t1,t2); break;
+		case GREATER_THAN:
+			t1 = new ASTGreaterThan(t1,t2); break;
+		case LESS_THAN:
+			t1 = new ASTLessThan(t1,t2); break;
+		default:
+			break;
+	  }
+    }
+  )?
+|
+  (
+    op = < PRINT >
+  | op = < PRINTLN >
+  ) (t1 = ExpAlg(e))?
+  {
+	if(op.kind == PRINT)
+		t1 = new ASTPrint(t1, false);
+	else t1 = new ASTPrint(t1, true);
+  }
+  )
+  {
+    return t1;
+  }
+}
+
+ASTNode ExpAlg(Environment<?> e) :
+{
+  Token op;
+  ASTNode t1, t2;
+  boolean flag = false;
+}
+{
+  (	< NOT > { flag = !flag; }
+  )*
+  t1 = Term(e)
+  {
+	if(flag) t1 = new ASTLogicNeg(t1);
+  }
+  (
+    (
+      op = < PLUS >
+    | op = < MINUS >
+    | op = < AND >
+    | op = < OR >
+    )
+    t2 = Term(e)
+    {
+	switch(op.kind) {
+		case PLUS:
+			t1 = new ASTPlus(t1,t2); break;
+		case MINUS:
+			t1 = new ASTSub(t1,t2); break;
+		case AND:
+			t1 = new ASTLogicAnd(t1,t2); break;
+		case OR:
+			t1 = new ASTLogicOr(t1,t2); break;
+		default:
+			break;
+	  }
+    }
+  )*
+  {
+    return t1;
+  }
+}
+
+ASTNode Term(Environment<?> e) :
+{
+  Token op;
+  ASTNode t1, t2;
+}
+{
+  t1 = Fact(e)
+  (
+    (
+      op = < TIMES >
+    | op = < DIV >
+    | op = < REMAINDER >
+    )
+    t2 = Fact(e)
+    {
+      if (op.kind == TIMES) t1 = new ASTMult(t1, t2);
+      else if(op.kind == DIV) t1 = new ASTDiv(t1, t2);
+      else t1 = new ASTRemainder(t1,t2);
+    }
+  )*
+  
+  {
+    return t1;
+  }
+}
+
+ASTNode Fact(Environment<?> e) :
+{
+  Token n;
+  java.util.List<Bind> defInits;
+  ASTNode t, tDefInit, tDefBody = null;
+}
+{
+  (
+    n = < Num >
+    {
+      t = new ASTNum(Integer.parseInt(n.image));
+    }
+  |
+   n = < Bool >
+   {
+	 t = new ASTBool(Boolean.parseBoolean(n.image));
+   }
+  |
+   < NEW > t = Fact(e)
+   {
+	 t = new ASTMCell(t);
+   }
+  | 
+    (
+      n = < PLUS >
+    | n = < MINUS >
+    )
+    t = Fact(e)
+    { if(n.kind == MINUS)
+      	t = new ASTMult(new ASTNum(-1), t);
+    }
+  |  
+    < DEF > { defInits = new java.util.LinkedList<Bind>(); }
+    (n = < Id > < EQUALS > tDefInit = ExpM(e) { defInits.add(new Bind(n.image,tDefInit, null)); })+
+    	< IN > tDefBody = ExpM(e) < END >
+    {
+      t = new ASTDef(defInits, tDefBody);
+    }
+  |
+     < IF > t = ExpM(e)  < THEN > tDefInit = ExpM(e)
+     (       < ELSE > tDefBody = ExpM(e)
+     )? < END >
+     {
+		t = new ASTIfThenElse(t, tDefInit, tDefBody);
+     }
+  |
+     < WHILE > t = ExpM(e)  < DO > tDefInit = ExpM(e) < END >
+     {
+		t = new ASTWhileDo(t, tDefInit);
+     }
+  | 
+    n = < Id >
+    {
+      t = new ASTVar(n.image);
+    }  
+  |
+  	< EXCLAMATION > t = Fact(e)
+    {
+      t = new ASTReference(t);
+    }
+  |
+    < LPAR > t = ExpM(e) < RPAR >
+  )
+  {
+    return t;
+  }
+}

@@ -1,0 +1,14 @@
+def 
+	m:ref int = new 5666 
+	x:ref int = new 2 
+in 
+	while !m > 1 && !x > 1 do  
+		println !m; print !x; println;
+		if !m % 2 == 0 then        
+			m := !m / 2; x := !x + 1 + 1
+		else        
+			m := 3*!m + 1; x := !x - 1 - 1 
+		end
+	end
+end
+
