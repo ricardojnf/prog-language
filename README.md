@@ -8,3 +8,27 @@ To run the program, enter the src directory and run the following command:
 
 The abstract syntax of the language is as follows:
 
+EE -> EE ; EE | EE := EE
+
+\| num | id | bool\
+
+| def(id = EE)+ in EE end | new EE | <!>EE
+
+| if EE then EE else EE end
+
+| while EEdo EEend
+
+| EE binop EE | unop E
+
+
+**Arithmetic operations** (on integer values)
+
+E+E, E-E, E*E, E/E, E%E, -E
+
+**Relational operations**
+
+E==E, E>E, E<E, E<=E, E>=E
+
+**Logical operations** (on boolean values)
+
+E && E, E || E, ~E
