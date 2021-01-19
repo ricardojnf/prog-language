@@ -12,7 +12,7 @@ EE -> EE ; EE | EE := EE
 
 | num | id | bool
 
-| def(id = EE)+ in EE end | new EE | <!>EE
+| def (id = EE)**+** in EE end | new EE | <!>EE
 
 | if EE then EE else EE end
 
