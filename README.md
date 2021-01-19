@@ -10,7 +10,7 @@ The abstract syntax of the language is as follows:
 
 EE -> EE ; EE | EE := EE
 
-\| num | id | bool\
+| num | id | bool
 
 | def(id = EE)+ in EE end | new EE | <!>EE
 
