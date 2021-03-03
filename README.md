@@ -4,31 +4,67 @@ The TestFile.txt file is the file we use to pass the expression to the compiler.
 
 To run the program, enter the src directory and run the following command:
 - If you want it to work as an interpreter: java Main I
-- If you want it to work as a compiler: java Main C <filename>, where filename is the name of the file found at the root of the project in which you place the program you want to be compiled.
+- If you want it to work as a compiler: java Main C filename, where filename is the name of the file found at the root of the project in which you place the program you want to be compiled.
 
-The abstract syntax of the language is as follows:
+The **abstract syntax** of the language is as follows:
 
-EE -> EE ; EE | EE := EE
+**T** -> Admitted Types
+*	**int** 
+*	**bool** 
+*	**ref** T
 
-| num | id | bool
-
-| def (id = EE)**+** in EE end | new EE | <!>EE
-
-| if EE then EE else EE end
-
-| while EEdo EEend
-
-| EE binop EE | unop E
-
+**EE** -> Expressions
+* EE **;** EE | EE **:=** EE
+* ***num*** | ***id*** | ***bool***
+* **def** (**id :** T **=** EE)+ **in** EE **end** | **new** EE | **!** EE
+* **if** EE **then** EE **else** EE **end**
+* **if** EE **then** EE **end**
+* **while** EE **do** EE **end**
+* EE **binop** EE | **unop** EE
 
 **Arithmetic operations** (on integer values)
 
-E+E, E-E, E*E, E/E, E%E, -E
+*	EE **+** EE 
+*	EE **-** EE 
+*	EE * EE
+* 	EE **/** EE 
+*	EE **%** EE 
+* 	**-** EE
+*	**(** EE **)**
 
 **Relational operations**
 
-E==E, E>E, E<E, E<=E, E>=E
+* 	EE **==** EE 
+* 	EE **>** EE 
+*	EE **<** EE 
+* 	EE **<=** EE 
+* 	EE **>=** EE
 
 **Logical operations** (on boolean values)
+
+*	EE **&&** EE
+*	EE **||** EE
+*	**!** EE
+
+Some examples of code written in this programming language:
+
+A simpler program:
+
+	def x: int = 1 in 
+		print x+x 
+	end
+
+A more complex program:
+
+	def m: ref int = new 10 one: int = 1 in 
+		while !m>one do
+			println !m ;
+			if !m % 2 == 0 then
+				m := !m / 2
+			else
+				m := 3*!m + 1
+			end
+		end
+	end
 
 E && E, E || E, ~E
